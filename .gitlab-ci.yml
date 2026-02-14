@@ -1,0 +1,114 @@
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  LATEST_TAG: $CI_REGISTRY_IMAGE:latest
+
+stages:
+  - build
+  - test
+  - deploy-dev
+  - deploy-staging
+  - deploy-production
+
+# Build Docker image
+build:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  tags:
+    - docker
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - docker build -t $IMAGE_TAG -t $LATEST_TAG .
+    - docker push $IMAGE_TAG
+    - docker push $LATEST_TAG
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# Unit tests (placeholder - expand based on your needs)
+test:
+  stage: test
+  image: python:3.11-slim
+  tags:
+    - docker
+  before_script:
+    - cd app
+    - pip install -r requirements.txt
+    - pip install pytest pytest-cov
+  script:
+    - echo "Running tests..."
+    # Add actual tests here: pytest --cov=app tests/
+    - python -c "import app; print('Basic import test passed')"
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# Deploy to Development
+deploy:dev:
+  stage: deploy-dev
+  tags:
+    - docker
+    - dev
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - chmod +x scripts/deploy.sh
+    - ./scripts/deploy.sh dev $CI_COMMIT_SHORT_SHA
+    - sleep 5
+    - chmod +x scripts/smoke-test.sh
+    - ./scripts/smoke-test.sh dev 8080
+  environment:
+    name: development
+    url: http://your-vm1-ip:8080
+  only:
+    - develop
+    - main
+
+# Deploy to Staging
+deploy:staging:
+  stage: deploy-staging
+  tags:
+    - docker
+    - staging
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - chmod +x scripts/deploy.sh
+    - ./scripts/deploy.sh staging $CI_COMMIT_SHORT_SHA
+    - sleep 5
+    - chmod +x scripts/smoke-test.sh
+    - ./scripts/smoke-test.sh staging 8081
+  environment:
+    name: staging
+    url: http://your-vm2-ip:8081
+  only:
+    - main
+  when: manual
+
+# Deploy to Production
+deploy:production:
+  stage: deploy-production
+  tags:
+    - docker
+    - production
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - chmod +x scripts/deploy.sh
+    - ./scripts/deploy.sh production $CI_COMMIT_SHORT_SHA
+    - sleep 5
+    - chmod +x scripts/smoke-test.sh
+    - ./scripts/smoke-test.sh production 8082
+  environment:
+    name: production
+    url: http://your-vm3-ip:8082
+  only:
+    - main
+  when: manual
+  # Require manual approval for production

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CI/CD Demo App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .dev { background-color: #e3f2fd; }
+        .staging { background-color: #fff3e0; }
+        .production { background-color: #e8f5e9; }
+        .info-box {
+            border: 2px solid #333;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body class="{{ environment }}">
+    <h1>🚀 Multi-Environment Deployment Demo</h1>
+    <div class="info-box">
+        <h2>Environment Information</h2>
+        <p><strong>Environment:</strong> {{ environment|upper }}</p>
+        <p><strong>Version:</strong> {{ version }}</p>
+        <p><strong>Hostname:</strong> {{ hostname }}</p>
+    </div>
+</body>
+</html>
