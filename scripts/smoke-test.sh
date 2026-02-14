@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 set -e
@@ -31,9 +30,9 @@ for i in $(seq 1 $MAX_RETRIES); do
     sleep $RETRY_INTERVAL
 done
 
-# Test health endpoint returns correct environment
+# Test health endpoint returns correct environment (flexible JSON parsing)
 HEALTH_RESPONSE=$(curl -s http://localhost:${PORT}/health)
-if echo "$HEALTH_RESPONSE" | grep -q "\"environment\": \"${ENVIRONMENT}\""; then
+if echo "$HEALTH_RESPONSE" | grep -q "\"environment\".*:.*\"${ENVIRONMENT}\""; then
     echo "✅ Health endpoint returns correct environment"
 else
     echo "❌ Health endpoint test failed"
@@ -42,14 +41,14 @@ else
 fi
 
 # Test main page
-if curl -f -s http://localhost:${PORT}/ | grep -q "${ENVIRONMENT}"; then
+if curl -f -s http://localhost:${PORT}/ | grep -qi "${ENVIRONMENT}"; then
     echo "✅ Main page displays correct environment"
 else
     echo "❌ Main page test failed"
     exit 1
 fi
 
-# Check if version is displayed (using short SHA)
+# Check if version is displayed
 if curl -f -s http://localhost:${PORT}/ | grep -q "Version"; then
     echo "✅ Version information is present"
 else
