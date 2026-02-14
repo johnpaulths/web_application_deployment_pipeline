@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 set -e
@@ -25,16 +26,23 @@ case $ENVIRONMENT in
         ;;
 esac
 
-echo "Deploying ${IMAGE_NAME} to ${ENVIRONMENT}..."
+echo "========================================="
+echo "Deploying to ${ENVIRONMENT} environment"
+echo "Image: ${IMAGE_NAME}"
+echo "Port: ${PORT_MAPPING}"
+echo "========================================="
 
 # Stop and remove existing container
+echo "Stopping existing container..."
 docker stop ${CONTAINER_NAME} 2>/dev/null || true
 docker rm ${CONTAINER_NAME} 2>/dev/null || true
 
 # Pull the latest image
+echo "Pulling image..."
 docker pull ${IMAGE_NAME}
 
 # Run new container
+echo "Starting new container..."
 docker run -d \
     --name ${CONTAINER_NAME} \
     --restart unless-stopped \
@@ -43,5 +51,9 @@ docker run -d \
     -e APP_VERSION=${VERSION} \
     ${IMAGE_NAME}
 
-echo "Deployment complete!"
-echo "Container ${CONTAINER_NAME} is running on port ${PORT_MAPPING%%:*}"
+echo "========================================="
+echo "✅ Deployment complete!"
+echo "Container: ${CONTAINER_NAME}"
+echo "Access at: http://localhost:${PORT_MAPPING%%:*}"
+echo "========================================="
+

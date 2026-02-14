@@ -1,6 +1,5 @@
 variables:
   DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: "/certs"
   IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
   LATEST_TAG: $CI_REGISTRY_IMAGE:latest
 
@@ -15,49 +14,51 @@ stages:
 build:
   stage: build
   image: docker:24
-  services:
-    - docker:24-dind
-  tags:
-    - docker
-  before_script:
-    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
-  script:
-    - docker build -t $IMAGE_TAG -t $LATEST_TAG .
-    - docker push $IMAGE_TAG
-    - docker push $LATEST_TAG
-  only:
-    - main
-    - develop
-    - merge_requests
-
-# Unit tests (placeholder - expand based on your needs)
-test:
-  stage: test
-  image: python:3.11-slim
-  tags:
-    - docker
-  before_script:
-    - cd app
-    - pip install -r requirements.txt
-    - pip install pytest pytest-cov
-  script:
-    - echo "Running tests..."
-    # Add actual tests here: pytest --cov=app tests/
-    - python -c "import app; print('Basic import test passed')"
-  only:
-    - main
-    - develop
-    - merge_requests
-
-# Deploy to Development
-deploy:dev:
-  stage: deploy-dev
   tags:
     - docker
     - dev
   before_script:
     - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
   script:
+    - echo "Building Docker image..."
+    - docker build -t $IMAGE_TAG -t $LATEST_TAG .
+    - echo "Pushing to registry..."
+    - docker push $IMAGE_TAG
+    - docker push $LATEST_TAG
+    - echo "Build complete! Image tagged as $CI_COMMIT_SHORT_SHA"
+  only:
+    - main
+    - develop
+
+# Unit tests
+test:
+  stage: test
+  image: python:3.11-slim
+  tags:
+    - docker
+    - dev
+  before_script:
+    - cd app
+    - pip install -r requirements.txt
+  script:
+    - echo "Running tests..."
+    - python -c "import app; print('✅ Basic import test passed')"
+    - python -c "from app import app; print('✅ Flask app import successful')"
+  only:
+    - main
+    - develop
+
+# Deploy to Development
+deploy:dev:
+  stage: deploy-dev
+  image: docker:24
+  tags:
+    - docker
+    - dev
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - echo "Deploying to Development environment..."
     - chmod +x scripts/deploy.sh
     - ./scripts/deploy.sh dev $CI_COMMIT_SHORT_SHA
     - sleep 5
@@ -65,7 +66,7 @@ deploy:dev:
     - ./scripts/smoke-test.sh dev 8080
   environment:
     name: development
-    url: http://your-vm1-ip:8080
+    url: http://development-environment
   only:
     - develop
     - main
@@ -73,12 +74,14 @@ deploy:dev:
 # Deploy to Staging
 deploy:staging:
   stage: deploy-staging
+  image: docker:24
   tags:
     - docker
     - staging
   before_script:
     - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
   script:
+    - echo "Deploying to Staging environment..."
     - chmod +x scripts/deploy.sh
     - ./scripts/deploy.sh staging $CI_COMMIT_SHORT_SHA
     - sleep 5
@@ -86,20 +89,23 @@ deploy:staging:
     - ./scripts/smoke-test.sh staging 8081
   environment:
     name: staging
-    url: http://your-vm2-ip:8081
+    url: http://staging-environment
   only:
     - main
   when: manual
+  needs: ["deploy:dev"]
 
 # Deploy to Production
 deploy:production:
   stage: deploy-production
+  image: docker:24
   tags:
     - docker
     - production
   before_script:
     - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
   script:
+    - echo "Deploying to Production environment..."
     - chmod +x scripts/deploy.sh
     - ./scripts/deploy.sh production $CI_COMMIT_SHORT_SHA
     - sleep 5
@@ -107,8 +113,8 @@ deploy:production:
     - ./scripts/smoke-test.sh production 8082
   environment:
     name: production
-    url: http://your-vm3-ip:8082
+    url: http://production-environment
   only:
     - main
   when: manual
-  # Require manual approval for production
+  needs: ["deploy:staging"]

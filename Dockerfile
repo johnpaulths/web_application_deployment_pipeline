@@ -22,13 +22,3 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Run with gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "app:app"]
-```
-
-**Create `.dockerignore`:**
-```
-.git
-.gitlab-ci.yml
-README.md
-*.pyc
-__pycache__
-.env

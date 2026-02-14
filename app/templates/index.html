@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -18,15 +19,34 @@
             border-radius: 8px;
             margin: 20px 0;
         }
+        h1 { color: #333; }
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .dev .badge { background-color: #2196F3; color: white; }
+        .staging .badge { background-color: #FF9800; color: white; }
+        .production .badge { background-color: #4CAF50; color: white; }
     </style>
 </head>
 <body class="{{ environment }}">
     <h1>🚀 Multi-Environment Deployment Demo</h1>
+    <div class="badge">{{ environment|upper }}</div>
     <div class="info-box">
         <h2>Environment Information</h2>
         <p><strong>Environment:</strong> {{ environment|upper }}</p>
         <p><strong>Version:</strong> {{ version }}</p>
-        <p><strong>Hostname:</strong> {{ hostname }}</p>
+        <p><strong>Container Hostname:</strong> {{ hostname }}</p>
+        <p><strong>Status:</strong> ✅ Running</p>
+    </div>
+    <div class="info-box">
+        <h2>Pipeline Details</h2>
+        <p>This application was automatically deployed via GitLab CI/CD pipeline</p>
+        <p>Demonstrating multi-environment deployment strategy</p>
     </div>
 </body>
 </html>
+
