@@ -13,7 +13,7 @@ stages:
 # Build Docker image
 build:
   stage: build
-  image: docker:24
+  image: docker:25-cli
   tags:
     - docker
     - dev
@@ -51,7 +51,7 @@ test:
 # Deploy to Development
 deploy:dev:
   stage: deploy-dev
-  image: docker:24
+  image: docker:25-cli
   tags:
     - docker
     - dev
@@ -74,7 +74,7 @@ deploy:dev:
 # Deploy to Staging
 deploy:staging:
   stage: deploy-staging
-  image: docker:24
+  image: docker:25-cli
   tags:
     - docker
     - staging
@@ -98,7 +98,7 @@ deploy:staging:
 # Deploy to Production
 deploy:production:
   stage: deploy-production
-  image: docker:24
+  image: docker:25-cli
   tags:
     - docker
     - production
