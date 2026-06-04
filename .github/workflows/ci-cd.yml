@@ -1,0 +1,2 @@
+deploy-dev:
+    runs-on: [self-hosted, docker, dev]
