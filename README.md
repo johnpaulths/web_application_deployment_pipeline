@@ -100,5 +100,5 @@ Created as a portfolio project demonstrating DevOps/SysAdmin capabilities for jo
 
 ## 📜 Certifications Referenced
 - Red Hat Certified System Administrator (RHCSA)
-- Red Hat Certified Engineer (RHCE) skills
-- AWS Certified Cloud Practitioner
+- Red Hat Certified Engineer (RHCE)
+
