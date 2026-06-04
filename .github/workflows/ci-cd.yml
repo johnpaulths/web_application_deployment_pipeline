@@ -1,2 +1,132 @@
-deploy-dev:
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  build:
     runs-on: [self-hosted, docker, dev]
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set short SHA
+        id: vars
+        run: echo "short_sha=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository }}
+          SHORT_SHA=${GITHUB_SHA::8}
+          echo "Building Docker image..."
+          docker build -t $IMAGE:$SHORT_SHA -t $IMAGE:latest .
+          docker push $IMAGE:$SHORT_SHA
+          docker push $IMAGE:latest
+          echo "Build complete! Image tagged as $SHORT_SHA"
+
+  test:
+    runs-on: [self-hosted, docker, dev]
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          cd app
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          echo "Running tests..."
+          python -c "import app; print('✅ Basic import test passed')"
+          python -c "from app import app; print('✅ Flask app import successful')"
+
+  deploy-dev:
+    runs-on: [self-hosted, docker, dev]
+    needs: test
+    environment:
+      name: development
+      url: http://development-environment
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to Development
+        run: |
+          SHORT_SHA=${GITHUB_SHA::8}
+          echo "Deploying to Development environment..."
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh dev $SHORT_SHA
+          sleep 10
+          chmod +x scripts/smoke-test.sh
+          ./scripts/smoke-test.sh dev 8080
+
+  deploy-staging:
+    runs-on: [self-hosted, docker, staging]
+    needs: deploy-dev
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: staging
+      url: http://staging-environment
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to Staging
+        run: |
+          SHORT_SHA=${GITHUB_SHA::8}
+          echo "Deploying to Staging environment..."
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh staging $SHORT_SHA
+          sleep 10
+          chmod +x scripts/smoke-test.sh
+          ./scripts/smoke-test.sh staging 8081
+
+  deploy-production:
+    runs-on: [self-hosted, docker, production]
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: http://production-environment
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to Production
+        run: |
+          SHORT_SHA=${GITHUB_SHA::8}
+          echo "Deploying to Production environment..."
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh production $SHORT_SHA
+          sleep 10
+          chmod +x scripts/smoke-test.sh
+          ./scripts/smoke-test.sh production 8082
